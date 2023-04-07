@@ -47,6 +47,7 @@ char* AudioDevice::Device(int32_t n)
 
 void AudioDevice::bufferSwitch(long index, bool processNow)
 {  
+    if (!running) return;
     for (int c=0; c<m_in; c++)  memcpy(audioBuffer+c*m_swBufSize+(m_T%m_swBufSize),asioBuffer[c].buffers[index],m_hwBufSize*sizeof(int32_t));
     for (int c=0; c<m_out; c++) memcpy(asioBuffer[m_in+c].buffers[index],audioBuffer+(m_in+c)*m_swBufSize+((m_T+2*m_hwBufSize)%m_swBufSize),m_hwBufSize*sizeof(int32_t));
     for (int c=0; c<m_out; c++) memset(audioBuffer+(m_in+c)*m_swBufSize+((m_T+2*m_hwBufSize)%m_swBufSize),0,m_hwBufSize*sizeof(int32_t));
@@ -92,7 +93,7 @@ bool AudioDevice::Open(int32_t n, int32_t rx, int32_t tx, int32_t swBuf)
     m_out = min((int)nOut,(int)tx);
     m_rate = 48000; //(int)*(double *)&dFs;
     m_hwBufSize = nPref;
-    m_swBufSize = ((swBuf+1)/m_hwBufSize)*m_hwBufSize;  // Make it integral size
+    m_swBufSize = ((swBuf-1)/m_hwBufSize+1)*m_hwBufSize;  // Make it integral size
 
 	asioCallbacks.bufferSwitch = &::bufferSwitch;
     asioCallbacks.sampleRateDidChange = &sampleRateDidChange;
@@ -131,12 +132,22 @@ void AudioDevice::Close()
 	Sleep(200);								// Brief sleep 
 }
 
+// Write audio into the buffer at time T and length N
+// Will only write the audio that would make sense give the current time and buffer
 bool AudioDevice::Write(int64_t T, int32_t N, int32_t *data, int32_t Sstride, int32_t Cstride)
 {
-    if (T < m_T+2*m_hwBufSize) return false;                      // Start time is too late
-    if (T + N > m_T + m_swBufSize + 2*m_hwBufSize) return false;  // End time exceeds buffer
+    if (!running) return false;
+    if (T     > m_T + m_swBufSize) return false;                  // All audio is too far into the future
+    if (T + N < m_T + 2*m_hwBufSize) return false;                // All audio is too far in the past
 
-    int32_t t_start = T % m_swBufSize;
+    int64_t t_start = max(T,     m_T + 2*m_hwBufSize);
+    int64_t t_end   = min(T + N, m_T + m_swBufSize);
+
+    if (t_start > T)         { N -= t_start - T; data += Sstride * (t_start - T); };
+    if (t_end   < t_start+N) { N  = t_start - t_end; };
+    if (N<=0) return false;
+
+    int32_t t_start = t_start % m_swBufSize;
     if (t_start + N > m_swBufSize)
     {
         for (int i=0; i<m_out; i++) for (int j=t_start; j<m_swBufSize; j++) audioBuffer[(i+m_in)*m_swBufSize+j] = data[i*Cstride+(j-t_start)*Sstride];
@@ -150,9 +161,18 @@ bool AudioDevice::Write(int64_t T, int32_t N, int32_t *data, int32_t Sstride, in
 
 bool AudioDevice::Read(int64_t T, int32_t N, int32_t *data, int32_t Sstride, int32_t Cstride)
 {
-    if (T < m_T-m_swBufSize || T+N > m_T) return false;
+    if (!running) return false;
+    if (T     > m_T               )  return false;                // All audio is too far into the future
+    if (T + N < m_T - m_swBufSize )  return false;                // All audio is too far in the past
 
-    int32_t t_start = T % m_swBufSize;
+    int64_t t_start = max(T,     m_T = m_swBufSize);
+    int64_t t_end   = min(T + N, m_T);
+
+    if (t_start > T)         { N -= t_start - T; data += Sstride * (t_start - T); };
+    if (t_end   < t_start+N) { N  = t_start - t_end; };
+    if (N<=0) return false;
+
+    int32_t t_start = t_start % m_swBufSize;
     if (t_start + N > m_swBufSize)
     {
         for (int i=0; i<m_in; i++) for (int j=t_start; j<m_swBufSize; j++) data[i*Cstride+(j-t_start)*Sstride] = audioBuffer[i*m_swBufSize+j];

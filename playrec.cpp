@@ -42,7 +42,8 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         if (nrhs==1) { N = audio.swBufSize()/2; T = audio.Now() - N; };        
         mwSize dims[2] = { (mwSize)N, (mwSize)audio.in() };
         plhs[0] = mxCreateNumericArray(2, dims, mxINT32_CLASS, mxREAL);
-        audio.Read(T, N, (int32_t *)mxGetData(plhs[0]), 1, N);
+        if ( T+N-audio.Now() < 10*audio.rate() ) while(audio.Now() < T+N) std::this_thread::sleep_for(std::chrono::microseconds(250));
+        if (!audio.Read(T, N, (int32_t *)mxGetData(plhs[0]), 1, N)) mexWarnMsgIdAndTxt("playrec:warning","Capture was outside of buffer range");
         return;
     }
 
@@ -52,9 +53,9 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
         const mxArray *p = prhs[1];
         if (nrhs==3) { T = (int)mxGetScalar(prhs[1]); p = prhs[2]; };
         if (mxGetClassID(p)!=mxINT32_CLASS) mexErrMsgIdAndTxt("playrec:error","Only int32 precision supported for now");
-        if (mxGetN(p)!=audio.out())       mexErrMsgIdAndTxt("playrec:error","Must be correct number of channels to output");
-        int N = mxGetM(p);
-        audio.Write(T, N, (int32_t *)mxGetData(p), 1, N);
+        if (mxGetN(p)!=audio.out())         mexErrMsgIdAndTxt("playrec:error","Must be correct number of channels to output");
+        int N = (int)mxGetM(p);
+        if (!audio.Write(T, N, (int32_t *)mxGetData(p), 1, N)) mexWarnMsgIdAndTxt("playrec:warning","Playback was outside of buffer range (too late)"); 
         return;
     }
 

@@ -3,14 +3,12 @@
 %% A loopback loop
 playrec('open','Device',4,'In',2,'Out',2,'Buffer',96000);
 T=playrec('now');
-N=128;
-D=256;
+N=32;
+D=128;
 while(1)
-    in = playrec('record',T-N,N);
-    playrec('play',T+D,in);
+    playrec('play',T+D, playrec('record',T-N,N)); 
     T = T+N;
     drawnow;
-    while(T>playrec('now')) drawnow; end;
 end;
 
 
@@ -45,7 +43,6 @@ x = playrec('record');
 playrec('open','Device',4,'In',2,'Out',2,'Buffer',96000);
 x = 2^31*int32((1:2000 == 500)'*[1 1]);
 playrec('play',48000,x);
-while (playrec('now')<1.2*48000) pause(0.001); end;
 y = playrec('record',48000,length(x));
 plot([x y]);
 [mx at] = max([x y]);
