@@ -1,7 +1,7 @@
 % A set of small tests to give playrec a bit of a workout
 
 %% A loopback loop
-playrec('open','Device',4,'In',2,'Out',2,'Buffer',96000);
+playrec('open','Device',3,'In',2,'Out',2,'Buffer',96000);
 T=playrec('now');
 N=32;
 D=128;
@@ -15,9 +15,9 @@ end;
 
 %% Play and capture random length pieces that should make a perfect tone
 
-playrec('open','Device',4,'In',2,'Out',2,'Buffer',96000);
+playrec('open','Device',3,'In',2,'Out',2,'Buffer',96000);
 t = (1:5*48000)';
-tone = 0.1*sin((t/48000)*2*pi*100*sqrt(2))*[1 1];
+tone = 0.01*sin((t/48000)*2*pi*100*sqrt(2))*[1 1];
 tone = int32(2^31*tone);
 y    = 0*tone;
 n    = 0;

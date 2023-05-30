@@ -28,6 +28,7 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     if (nrhs>=1 && mxIsChar(prhs[0]) && !_stricmp(mxArrayToString(prhs[0]),"open"))
     {
+        mexPrint("Attempting to open an ASIO device.\nNote that only 32 bit ASIO devices are presently supported - other formats may create digital noise.\n");
         config(nrhs, prhs);
         plhs[0]=mxCreateDoubleScalar((double)audio.Now());
         return;

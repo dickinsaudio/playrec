@@ -143,11 +143,11 @@ bool AudioDevice::Write(int64_t T, int32_t N, int32_t *data, int32_t Sstride, in
     int64_t t_start = max(T,     m_T + 2*m_hwBufSize);
     int64_t t_end   = min(T + N, m_T + m_swBufSize);
 
-    if (t_start > T)         { N -= t_start - T; data += Sstride * (t_start - T); };
-    if (t_end   < t_start+N) { N  = t_start - t_end; };
+    if (t_start > T) data += Sstride * (t_start - T);
+    N  = (int32_t)(t_end - t_start);
     if (N<=0) return false;
 
-    int32_t t_start = t_start % m_swBufSize;
+    t_start = t_start % m_swBufSize;
     if (t_start + N > m_swBufSize)
     {
         for (int i=0; i<m_out; i++) for (int j=t_start; j<m_swBufSize; j++) audioBuffer[(i+m_in)*m_swBufSize+j] = data[i*Cstride+(j-t_start)*Sstride];
@@ -165,14 +165,14 @@ bool AudioDevice::Read(int64_t T, int32_t N, int32_t *data, int32_t Sstride, int
     if (T     > m_T               )  return false;                // All audio is too far into the future
     if (T + N < m_T - m_swBufSize )  return false;                // All audio is too far in the past
 
-    int64_t t_start = max(T,     m_T = m_swBufSize);
+    int64_t t_start = max(T,     m_T - m_swBufSize);
     int64_t t_end   = min(T + N, m_T);
 
-    if (t_start > T)         { N -= t_start - T; data += Sstride * (t_start - T); };
-    if (t_end   < t_start+N) { N  = t_start - t_end; };
+    if (t_start > T) data += Sstride * (t_start - T);
+    N  = (int32_t)(t_end - t_start);
     if (N<=0) return false;
 
-    int32_t t_start = t_start % m_swBufSize;
+    t_start = t_start % m_swBufSize;
     if (t_start + N > m_swBufSize)
     {
         for (int i=0; i<m_in; i++) for (int j=t_start; j<m_swBufSize; j++) data[i*Cstride+(j-t_start)*Sstride] = audioBuffer[i*m_swBufSize+j];
