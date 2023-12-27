@@ -11,7 +11,7 @@
 #include "mex.h"
 
 
-#define ASIO_MAX_CH 32
+#define ASIO_MAX_CH 64
 
 bool loadAsioDriver(char *name);
 AudioDevice*    audioDevice = nullptr;
