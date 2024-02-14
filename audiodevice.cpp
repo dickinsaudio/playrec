@@ -11,7 +11,7 @@
 #include "mex.h"
 
 
-#define ASIO_MAX_CH 64
+#define ASIO_MAX_CH 512
 
 bool loadAsioDriver(char *name);
 AudioDevice*    audioDevice = nullptr;
@@ -45,6 +45,50 @@ char* AudioDevice::Device(int32_t n)
     return Temp;
 }
 
+int AudioDevice::DeviceInputs(int32_t n)
+{
+    if (n<0 || n>=Devices()) return 0;
+    ASIODriverInfo asioDriver;
+	if (!loadAsioDriver(Device(n)) || ASIOInit(&asioDriver)) return 0;
+    long nIn, nOut;
+    ASIOGetChannels(&nIn, &nOut);   
+    ASIOExit();	
+    return min(nIn,ASIO_MAX_CH);
+}
+
+int AudioDevice::DeviceOutputs(int32_t n)
+{
+    if (n<0 || n>=Devices()) return 0;
+    ASIODriverInfo asioDriver;
+	if (!loadAsioDriver(Device(n)) || ASIOInit(&asioDriver)) return 0;
+    long nIn, nOut;
+    ASIOGetChannels(&nIn, &nOut);   
+    ASIOExit();	
+    return min(nOut,ASIO_MAX_CH);
+}
+
+int AudioDevice::DeviceRate(int32_t n)
+{
+    if (n<0 || n>=Devices()) return 0;
+    ASIODriverInfo asioDriver;
+	if (!loadAsioDriver(Device(n)) || ASIOInit(&asioDriver)) return 0;
+	double dFs;
+    ASIOGetSampleRate(&dFs);
+    ASIOExit();	
+    return  (int)*(double *)&dFs;
+}
+
+int AudioDevice::DeviceBlock(int32_t n)
+{
+    if (n<0 || n>=Devices()) return 0;
+    ASIODriverInfo asioDriver;
+	if (!loadAsioDriver(Device(n)) || ASIOInit(&asioDriver)) return 0;
+	long nMin, nMax, nPref, nStep;
+	ASIOGetBufferSize(&nMin, &nMax, &nPref, &nStep);
+    ASIOExit();	
+    return  nPref;
+}
+
 void AudioDevice::bufferSwitch(long index, bool processNow)
 {  
     if (!running) return;
@@ -73,8 +117,6 @@ void asioBuffersUnderrun(int64_t index) { audioDevice->asioBufferUnderrun(index)
 const int debug=1;
 bool AudioDevice::Open(int32_t n, int32_t rx, int32_t tx, int32_t swBuf)
 {
-    fprintf(stderr,"Help");
-
     if (n<0 || n>=Devices() ) return false;
     if (rx>ASIO_MAX_CH || tx>ASIO_MAX_CH) return false;
     if (running) return false;
@@ -83,15 +125,15 @@ bool AudioDevice::Open(int32_t n, int32_t rx, int32_t tx, int32_t swBuf)
 	if (!loadAsioDriver(Device(n)) || ASIOInit(&asioDriver)) return false;
 
     long nIn, nOut, nMin, nMax, nPref, nStep;
-	//ASIOSampleRate dFs;
+	double dFs;
 
     ASIOGetChannels(&nIn, &nOut);   
-	//ASIOGetSampleRate(&dFs);
+	ASIOGetSampleRate(&dFs);
 	ASIOGetBufferSize(&nMin, &nMax, &nPref, &nStep);
 
     m_in = min((int)nIn,(int)rx);
     m_out = min((int)nOut,(int)tx);
-    m_rate = 48000; //(int)*(double *)&dFs;
+    m_rate = (int)*(double *)&dFs;
     m_hwBufSize = nPref;
     m_swBufSize = ((swBuf-1)/m_hwBufSize+1)*m_hwBufSize;  // Make it integral size
 

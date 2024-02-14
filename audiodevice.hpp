@@ -9,6 +9,10 @@ public:
 
     int32_t Devices();
     char* Device(int32_t device);
+    int32_t  DeviceInputs(int32_t device);
+    int32_t  DeviceOutputs(int32_t device);
+    int32_t  DeviceRate(int32_t device);
+    int32_t  DeviceBlock(int32_t device);
 
     bool Open(int32_t Device, int32_t rx=2, int32_t tx=2, int32_t swBuf=96000);
     void Close();    

@@ -22,7 +22,13 @@ void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
 
     if (nrhs==2 && mxIsChar(prhs[0]) && mxIsScalar(prhs[1]) && !_stricmp(mxArrayToString(prhs[0]),"device"))
     {
-        plhs[0] = mxCreateString(audio.Device((int)mxGetScalar(prhs[1])-1));
+        char *str = audio.Device((int)mxGetScalar(prhs[1])-1);
+        if (str == nullptr) plhs[0] = mxCreateString("");
+        else                plhs[0] = mxCreateString(audio.Device((int)mxGetScalar(prhs[1])-1));
+        if (nlhs>=2) plhs[1] = mxCreateDoubleScalar(audio.DeviceInputs((int)mxGetScalar(prhs[1])-1));
+        if (nlhs>=3) plhs[2] = mxCreateDoubleScalar(audio.DeviceOutputs((int)mxGetScalar(prhs[1])-1));
+        if (nlhs>=4) plhs[3] = mxCreateDoubleScalar(audio.DeviceRate((int)mxGetScalar(prhs[1])-1));
+        if (nlhs>=5) plhs[4] = mxCreateDoubleScalar(audio.DeviceBlock((int)mxGetScalar(prhs[1])-1));
         return;
 	}
 
