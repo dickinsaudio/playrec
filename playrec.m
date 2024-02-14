@@ -55,6 +55,8 @@ if (isempty(inputs))   inputs  = in; end;
 if (isscalar(inputs))  inputs  = 1:min(in,inputs); end;
 if (background)        error("Background mode not yet supported"); end;
 
+cleanupobj = onCleanup(@cleanup);
+
 playrec_engine('open','Device',device,'In',max(inputs),'Out',max(outputs),'Buffer',96000);
 
 d=delay*rate;
@@ -80,13 +82,9 @@ while(t<size(X,1))
     y = playrec_engine('record',d+t,rec); 
     Y(t+(1:rec),:) = double(y(1:rec,inputs))/2^31;
     t = T;
-    fprintf("Time %4.1f of %4.1f\n",t/rate,N/rate);
+%    fprintf("Time %4.1f of %4.1f\n",t/rate,N/rate);
 end;
 
-
-
-
-
-
-
+function cleanup()
+    clear playrec_engine;
 
